@@ -1,0 +1,85 @@
+doc_api_doc:
+请为以下api生成标准文档：
+【基本信息】
+-api名称：deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+-版本号
+
+【接口说明】
+1.请求用途:智能总结新闻
+2.请求方式
+3.参数说明
+4.返回值
+5.错误码
+
+【代码示例】
+
+curl --request POST \
+  --url https://api.siliconflow.cn/v1/chat/completions \
+  --header 'Authorization: Bearer <token>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "model": "deepseek-ai/DeepSeek-V3",
+  "messages": [
+    {
+      "role": "user",
+      "content": "中国大模型行业2025年将会迎来哪些机遇和挑战？"
+    }
+  ],
+  "stream": false,
+  "max_tokens": 512,
+  "stop": [
+    "null"
+  ],
+  "temperature": 0.7,
+  "top_p": 0.7,
+  "top_k": 50,
+  "frequency_penalty": 0.5,
+  "n": 1,
+  "response_format": {
+    "type": "text"
+  },
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "description": "<string>",
+        "name": "<string>",
+        "parameters": {},
+        "strict": false
+      }
+    }
+  ]
+}'
+
+{
+  "id": "<string>",
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "<string>",
+        "reasoning_content": "<string>"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "tool_calls": [
+    {
+      "id": "<string>",
+      "type": "function",
+      "function": {
+        "name": "<string>",
+        "arguments": "<string>"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 123,
+    "completion_tokens": 123,
+    "total_tokens": 123
+  },
+  "created": 123,
+  "model": "<string>",
+  "object": "chat.completion"
+}
+
