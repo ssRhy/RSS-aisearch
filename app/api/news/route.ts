@@ -84,34 +84,58 @@ async function summarizeWithAI(content: string) {
       .replace(/我们要[^。]*。/g, "")
       .replace(/让我们[^。]*。/g, "")
       .replace(/好的[^。]*。/g, "")
+      .replace(/确保[^。]*。/g, "")
+      .replace(/现在[^。]*。/g, "")
+      .replace(/最后[^。]*。/g, "")
       .trim();
 
-    // 如果内容不在<summary>标签内，则添加标签
-    if (!/<summary>[\s\S]*<\/summary>/.test(summary)) {
-      // 如果文本看起来像是思考过程，返回空字符串
-      if (
-        summary.includes("处理") ||
-        summary.includes("分析") ||
-        summary.includes("总结一下") ||
-        summary.includes("我来")
-      ) {
-        return "";
-      }
-      summary = `<summary>${summary}</summary>`;
+    // 检查是否包含思考过程关键词
+    const thinkingKeywords = [
+      "处理", "总结一下", "我来", "整理", "思考",
+      "格式要求", "标签包裹", "不添加"
+    ];
+
+    // 如果包含思考过程关键词，返回空字符串
+    if (thinkingKeywords.some(keyword => summary.includes(keyword))) {
+      return "";
     }
 
-    // 提取<summary>标签中的内容
-    const summaryMatch = summary.match(/<summary>([\s\S]*?)<\/summary>/);
-    const finalSummary = summaryMatch ? summaryMatch[1].trim() : summary.trim();
+    // 提取<summary>标签中的内容，如果没有则添加
+    let summaryMatch = summary.match(/<summary>([\s\S]*?)<\/summary>/);
+    
+    if (!summaryMatch) {
+      // 如果文本不是以标点符号结尾，可能是不完整的
+      if (!summary.match(/[。！？]$/)) {
+        // 尝试寻找最后一个完整句子
+        const lastSentence = summary.match(/[^。！？]*[。！？]/g);
+        if (lastSentence) {
+          summary = lastSentence.join('');
+        } else {
+          return "";
+        }
+      }
+      summary = `<summary>${summary}</summary>`;
+      summaryMatch = summary.match(/<summary>([\s\S]*?)<\/summary>/);
+    }
 
-    // 如果最终结果仍然包含思考过程的特征，返回空字符串
-    if (
-      finalSummary.includes("处理") ||
-      finalSummary.includes("分析") ||
-      finalSummary.includes("总结一下") ||
-      finalSummary.includes("我来")
+    let finalSummary = summaryMatch ? summaryMatch[1].trim() : "";
+
+    // 如果总结太短，尝试保留更多内容
+    if (finalSummary.length < 10 && summary.length > 10) {
+      finalSummary = summary.replace(/<\/?summary>/g, '').trim();
+    }
+
+    // 最终验证
+    if (!finalSummary || 
+        finalSummary.length > 200 || // 保持长度限制
+        thinkingKeywords.some(keyword => finalSummary.includes(keyword)) // 仍然检查关键词
     ) {
       return "";
+    }
+
+    // 确保以标点符号结尾
+    if (!finalSummary.match(/[。！？]$/)) {
+      finalSummary += '。';
     }
 
     return finalSummary;
