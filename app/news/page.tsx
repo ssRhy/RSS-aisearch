@@ -1,154 +1,106 @@
-import Parser from "rss-parser";
-import axios from "axios";
-import { NextResponse } from "next/server";
+"use client";
 
-// 定义 RSS 源
-const RSS_FEEDS = {
-  "36kr": "https://36kr.com/feed",
-  geekpark: "https://www.geekpark.net/rss",
-  cyzone: "https://special.cyzone.cn/rss",
-};
+import { useEffect, useState } from "react";
 
-// 创建解析器实例
-const parser = new Parser({
-  customFields: {
-    item: [
-      "geekpark",
-      "cyzone",
-      "36kr",
-      "pubDate",
-      "content",
-      "contentSnippet",
-    ],
-  },
-});
+interface NewsItem {
+  title: string;
+  link: string;
+  pubDate: string;
+  source: string;
+  summary: string;
+}
 
-async function summarizeWithAI(content: string) {
-  if (!process.env.SILICONFLOW_API_KEY) {
-    console.error("Missing SILICONFLOW_API_KEY");
-    return null;
-  }
+export default function NewsPage() {
+  const [news, setNews] = useState<NewsItem[]>([]); // 确保初始化为空数组
+  const [loading, setLoading] = useState(true);
 
-  try {
-    const response = await axios.post(
-      "https://api.siliconflow.cn/v1/chat/completions",
-      {
-        model: "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
-        messages: [
-          {
-            role: "user",
-            content: `请简要总结以下新闻内容（100字以内）：${content}`,
-          },
-        ],
-        max_tokens: 512,
-        temperature: 0.7,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.SILICONFLOW_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        timeout: 10000, // 10 seconds timeout
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch("/api/news");
+        const data = await response.json();
+        // 确保data.feeds存在且是数组
+        const newsItems = Array.isArray(data.feeds) ? data.feeds : [];
+        console.log('Fetched news items:', newsItems); // 调试日志
+        setNews(newsItems);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching news:", error);
+        setLoading(false);
       }
-    );
-
-    if (!response.data?.choices?.[0]?.message?.content) {
-      console.error("Invalid AI response format:", response.data);
-      return null;
-    }
-
-    return response.data.choices[0].message.content;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error("AI API Error:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
-    } else {
-      console.error("Unknown error during AI summarization:", error);
-    }
-    return null;
-  }
-}
-
-async function fetchRSSFeed(source: string, url: string) {
-  try {
-    const feed = await parser.parseURL(url);
-    if (!feed?.items?.length) {
-      console.error(`No items found in feed for ${source}`);
-      return [];
-    }
-
-    const newsItems = await Promise.all(
-      feed.items.slice(0, 5).map(async (item) => {
-        const content = item.content || item.contentSnippet || item.title || "";
-        const aiSummary = await summarizeWithAI(content);
-
-        return {
-          title: item.title || "无标题",
-          link: item.link || "",
-          summary: content,
-          aiSummary,
-          source,
-          pubDate: item.pubDate || item.isoDate || new Date().toISOString(),
-        };
-      })
-    );
-
-    return newsItems.filter((item) => item.title && item.link);
-  } catch (error) {
-    console.error(`Error fetching ${source}:`, error);
-    return [];
-  }
-}
-
-export async function GET() {
-  try {
-    // 设置 CORS headers
-    const headers = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
     };
 
-    const feedPromises = Object.entries(RSS_FEEDS).map(([source, url]) =>
-      fetchRSSFeed(source, url)
-    );
+    fetchNews();
+  }, []);
 
-    const results = await Promise.all(feedPromises);
-    const allNews = results.flat();
-
-    // 按日期排序
-    allNews.sort((a, b) => {
-      const dateA = new Date(a.pubDate);
-      const dateB = new Date(b.pubDate);
-      return dateB.getTime() - dateA.getTime();
-    });
-
-    return NextResponse.json(allNews, { headers });
-  } catch (error) {
-    console.error("API error:", error);
-    return NextResponse.json(
-      {
-        error: "Failed to fetch news",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500, headers: { "Access-Control-Allow-Origin": "*" } }
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-xl">加载中...</div>
+      </div>
     );
   }
-}
 
-// 处理 OPTIONS 请求
-export async function OPTIONS() {
-  return NextResponse.json(
-    {},
-    {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    }
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">科技新闻聚合</h1>
+      <div className="grid gap-6">
+        {Array.isArray(news) && news.map((item: NewsItem, index: number) => (
+          <div
+            key={index}
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-medium px-2 py-1 bg-gray-100 rounded">
+                {item.source}
+              </span>
+              <span className="text-sm text-gray-500">
+                {new Date(item.pubDate).toLocaleDateString("zh-CN")}
+              </span>
+            </div>
+            
+            <h2 className="text-xl font-semibold mb-3">
+              <a href={item.link} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
+                {item.title}
+              </a>
+            </h2>
+            
+            <div className="mt-3 p-4 bg-gray-50 rounded-md">
+              <div className="flex items-center gap-2 mb-2">
+                <svg
+                  className="w-5 h-5 text-blue-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
+                </svg>
+                <span className="font-medium text-gray-700">AI 总结</span>
+              </div>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                {item.summary}
+              </p>
+            </div>
+            
+            <div className="mt-4 flex justify-end">
+              <a
+                href={item.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+              >
+                阅读全文 →
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

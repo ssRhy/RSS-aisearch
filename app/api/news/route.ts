@@ -4,21 +4,21 @@ import { NextResponse } from "next/server";
 
 // 定义 RSS 源
 const RSS_FEEDS = {
-  "36kr": "https://36kr.com/feed",
-  geekpark: "https://www.geekpark.net/rss",
-  cyzone: "https://special.cyzone.cn/rss",
+  "36KR": "https://www.36kr.com/feed",
+  "GEEKPARK": "https://www.geekpark.net/rss",
+  "OSCHINA": "https://www.oschina.net/news/rss",
+  "ITHOME": "https://www.ithome.com/rss/",
+  "CNBETA": "https://www.cnbeta.com/backend.php",
 };
 
-// 创建解析器实例
+// 创建 RSS parser 实例
 const parser = new Parser({
   customFields: {
     item: [
-      "geekpark",
-      "cyzone",
-      "36kr",
-      "pubDate",
-      "content",
-      "contentSnippet",
+      ['media:content', 'media'],
+      ['content:encoded', 'contentEncoded'],
+      ['description', 'description'],
+      ['content', 'content'],
     ],
   },
 });
@@ -153,69 +153,105 @@ async function summarizeWithAI(content: string) {
   }
 }
 
-async function fetchRSSFeed(source: string, url: string) {
-  try {
-    const feed = await parser.parseURL(url);
-    if (!feed?.items?.length) {
-      console.error(`No items found in feed for ${source}`);
-      return [];
-    }
-
-    const newsItems = await Promise.all(
-      feed.items.slice(0, 5).map(async (item) => {
-        const content = item.content || item.contentSnippet || item.title || "";
-        const aiSummary = await summarizeWithAI(content);
-
-        return {
-          title: item.title || "无标题",
-          link: item.link || "",
-          summary: content,
-          aiSummary,
-          source,
-          pubDate: item.pubDate || item.isoDate || new Date().toISOString(),
-        };
-      })
-    );
-
-    return newsItems.filter((item) => item.title && item.link);
-  } catch (error) {
-    console.error(`Error fetching ${source}:`, error);
-    return [];
-  }
-}
-
 export async function GET() {
   try {
-    // 设置 CORS headers
-    const headers = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    };
+    console.log('Starting to fetch RSS feeds...'); // 调试日志
 
-    const feedPromises = Object.entries(RSS_FEEDS).map(([source, url]) =>
-      fetchRSSFeed(source, url)
-    );
+    const feedPromises = Object.entries(RSS_FEEDS).map(async ([source, url]) => {
+      try {
+        console.log(`Fetching from ${source}: ${url}`); // 调试日志
+        const feed = await parser.parseURL(url);
+        console.log(`Received ${feed.items?.length || 0} items from ${source}`); // 调试日志
 
-    const results = await Promise.all(feedPromises);
-    const allNews = results.flat();
+        if (!feed?.items?.length) {
+          console.log(`No items found in feed for ${source}`);
+          return [];
+        }
 
-    // 按日期排序
-    allNews.sort((a, b) => {
-      const dateA = new Date(a.pubDate);
-      const dateB = new Date(b.pubDate);
-      return dateB.getTime() - dateA.getTime();
+        const items = await Promise.all(
+          feed.items.slice(0, 5).map(async (item) => {
+            try {
+              console.log('Item fields:', Object.keys(item));
+              console.log('Item content fields:', {
+                content: item.content ? 'exists' : 'null',
+                contentEncoded: item.contentEncoded ? 'exists' : 'null',
+                'content:encoded': item['content:encoded'] ? 'exists' : 'null',
+                contentSnippet: item.contentSnippet ? 'exists' : 'null',
+                description: item.description ? 'exists' : 'null',
+                title: item.title ? 'exists' : 'null'
+              });
+              
+              // 尝试从多个可能的字段中获取内容
+              let content = "";
+              
+              // 按优先级尝试不同的内容字段
+              if (item.contentEncoded && item.contentEncoded.length > 20) {
+                content = item.contentEncoded;
+              } else if (item.content && item.content.length > 20) {
+                content = item.content;
+              } else if (item.description && item.description.length > 20) {
+                content = item.description;
+              } else if (item.contentSnippet && item.contentSnippet.length > 20) {
+                content = item.contentSnippet;
+              } else {
+                content = item.title || "";
+              }
+              
+              // 移除HTML标签
+              content = content.replace(/<[^>]*>/g, '');
+              
+              // 调试日志
+              console.log(`Content source for "${item.title}":`, {
+                length: content.length,
+                preview: content.substring(0, 100) + '...'
+              });
+              
+              console.log(`Processing item from ${source}: ${item.title}`); // 调试日志
+
+              // 获取每个新闻的摘要
+              const summary = await summarizeWithAI(content);
+              console.log(`Summary generated for ${item.title}: ${summary ? 'success' : 'failed'}`); // 调试日志
+              
+              if (summary) {
+                return {
+                  title: item.title || "无标题",
+                  link: item.link || "",
+                  pubDate: item.pubDate || item.isoDate || new Date().toISOString(),
+                  source,
+                  summary
+                };
+              }
+              return null;
+            } catch (error) {
+              console.error(`Error processing item from ${source}:`, error);
+              return null;
+            }
+          })
+        );
+
+        // 过滤掉没有摘要的新闻（null值）
+        const validItems = items.filter(item => item !== null);
+        console.log(`Valid items from ${source}: ${validItems.length}`); // 调试日志
+        return validItems;
+      } catch (error) {
+        console.error(`Error fetching ${source}:`, error);
+        return [];
+      }
     });
 
-    return NextResponse.json(allNews, { headers });
+    const allFeeds = await Promise.all(feedPromises);
+    const feeds = allFeeds.flat().sort((a, b) => {
+      return new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime();
+    });
+
+    console.log(`Total feeds after processing: ${feeds.length}`); // 调试日志
+
+    return NextResponse.json({ feeds });
   } catch (error) {
-    console.error("API error:", error);
+    console.error("Error in GET /api/news:", error);
     return NextResponse.json(
-      {
-        error: "Failed to fetch news",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500, headers: { "Access-Control-Allow-Origin": "*" } }
+      { error: "Failed to fetch feeds", feeds: [] },
+      { status: 500 }
     );
   }
 }
