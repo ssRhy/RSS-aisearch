@@ -11,6 +11,15 @@ const nextConfig = {
   reactStrictMode: true,
   // 输出选项
   output: "standalone",
+  // 改进 CSS 处理
+  webpack: (config, { dev, isServer }) => {
+    // 只在开发模式客户端添加此配置
+    if (dev && !isServer) {
+      // 提高 CSS HMR 可靠性
+      config.optimization.runtimeChunk = "single";
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;
