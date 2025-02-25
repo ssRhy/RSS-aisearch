@@ -21,7 +21,7 @@ export default function Home() {
       try {
         setLoading(true);
         setError(null);
-        console.log('Fetching news...'); // 调试日志
+        console.log("Fetching news..."); // 调试日志
 
         const response = await fetch("/api/news");
         if (!response.ok) {
@@ -29,19 +29,21 @@ export default function Home() {
         }
 
         const data = await response.json();
-        console.log('Received data:', data); // 调试日志
+        console.log("Received data:", data); // 调试日志
 
         if (!data.feeds) {
-          throw new Error('No feeds data received');
+          throw new Error("No feeds data received");
         }
 
         const newsItems = Array.isArray(data.feeds) ? data.feeds : [];
-        console.log('Processed news items:', newsItems); // 调试日志
-        
+        console.log("Processed news items:", newsItems); // 调试日志
+
         setNews(newsItems);
       } catch (error) {
         console.error("Error fetching news:", error);
-        setError(error instanceof Error ? error.message : 'Failed to fetch news');
+        setError(
+          error instanceof Error ? error.message : "Failed to fetch news"
+        );
       } finally {
         setLoading(false);
       }
@@ -67,6 +69,10 @@ export default function Home() {
       </main>
     );
   }
+
+  const debugInfo =
+    process.env.NODE_ENV !== "production" ||
+    new URLSearchParams(window.location.search).has("debug");
 
   return (
     <main className={styles.main}>
@@ -101,6 +107,19 @@ export default function Home() {
           </div>
         )}
       </div>
+      {debugInfo && (
+        <div
+          className={styles.debugInfo}
+          style={{ margin: "10px", padding: "10px", border: "1px solid #ccc" }}
+        >
+          <p>环境: {process.env.NODE_ENV}</p>
+          <p>数据条数: {news.length}</p>
+          <p>
+            窗口宽度:{" "}
+            {typeof window !== "undefined" ? window.innerWidth : "unknown"}
+          </p>
+        </div>
+      )}
     </main>
   );
 }

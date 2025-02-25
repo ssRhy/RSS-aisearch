@@ -21,17 +21,22 @@
 .newsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  gap: 20px;
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
 }
 
 .newsCard {
-  background: white;
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
+  padding: 16px;
+  margin-bottom: 20px;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  height: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .newsCard:hover {
@@ -73,10 +78,12 @@
 }
 
 .summary {
-  background-color: #f8f9fa;
-  border-radius: 6px;
-  padding: 1rem;
-  margin-top: 1rem;
+  margin-top: 10px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  max-height: none;
+  line-height: 1.5;
 }
 
 .summaryHeader {
