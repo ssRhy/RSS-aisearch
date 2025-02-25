@@ -110,14 +110,54 @@ export default function Home() {
       {debugInfo && (
         <div
           className={styles.debugInfo}
-          style={{ margin: "10px", padding: "10px", border: "1px solid #ccc" }}
+          style={{
+            margin: "20px",
+            padding: "15px",
+            border: "1px solid #ccc",
+            backgroundColor: "#f0f0f0",
+            borderRadius: "8px",
+          }}
         >
-          <p>环境: {process.env.NODE_ENV}</p>
-          <p>数据条数: {news.length}</p>
+          <h3>环境诊断信息</h3>
           <p>
-            窗口宽度:{" "}
+            <strong>环境:</strong> {process.env.NODE_ENV}
+          </p>
+          <p>
+            <strong>数据条数:</strong> {news.length}
+          </p>
+          <p>
+            <strong>窗口宽度:</strong>{" "}
             {typeof window !== "undefined" ? window.innerWidth : "unknown"}
           </p>
+          <p>
+            <strong>API路径:</strong> {"/api/news"}
+          </p>
+          <p>
+            <strong>用户代理:</strong>{" "}
+            {typeof navigator !== "undefined" ? navigator.userAgent : "unknown"}
+          </p>
+          <p>
+            <strong>渲染时间:</strong> {new Date().toLocaleTimeString()}
+          </p>
+
+          {/* 显示第一个新闻摘要信息 */}
+          {news.length > 0 && (
+            <div style={{ marginTop: "10px" }}>
+              <h4>第一条新闻摘要信息</h4>
+              <p>
+                <strong>标题:</strong> {news[0].title}
+              </p>
+              <p>
+                <strong>来源:</strong> {news[0].source}
+              </p>
+              <p>
+                <strong>摘要长度:</strong> {news[0].summary?.length || 0}字
+              </p>
+              <p>
+                <strong>摘要前50字:</strong> {news[0].summary?.substring(0, 50)}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </main>
