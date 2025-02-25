@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # RSS新闻聚合与AI摘要系统
 
 一个基于Next.js的RSS新闻聚合系统，集成了AI驱动的新闻摘要功能。系统自动从多个科技新闻源获取最新内容，并使用AI生成简洁的中文摘要。
@@ -448,3 +449,6 @@ console.log(`Summary generated for ${item.title}: ${summary ? 'success' : 'faile
 - 使用清晰的类型定义
 - 实现模块化的错误处理
 - 保持代码的可维护性和可测试性
+=======
+# RSS-aisearch
+>>>>>>> e4f20b64d7188776b5229f1fa493bc73688f3b32
